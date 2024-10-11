@@ -1,0 +1,82 @@
+#install.packages("pacman")#en dado caso que no tenga instalados los paquetes
+#Creador Manolo Monterrubio
+#Ejercicio: Analisis de miRNAs
+library(pacman)
+p_load("dplyr",
+       "ggplot2")
+Base_datos <- read.csv(file = "https://raw.githubusercontent.com/ManuelLaraMVZ/Transcript-mica/main/Datos%20completos%20miRNAs%20ejercicio.csv")
+#View(Base_datos)
+head(Base_datos)
+Controles <- Base_datos %>% 
+  filter(Type=="Selected Control") %>% 
+  select(-Type)
+Controles
+Promedio_Controles <- Controles %>% 
+  mutate(Prom_Tx=(T1+T2+T3)/3,
+         Prom_Cx=(C1+C2+C3)/3) %>% 
+  select(-2,-3,-4,-5,-6,-7) %>% 
+  filter(miRNA=="U6 snRNA")
+Promedio_Controles
+
+Gen_Interes <- Base_datos %>% 
+  filter(Type=="Target") %>% 
+  select(-Type)
+Gen_Interes
+Promedio_Genes <- Gen_Interes %>% 
+  mutate(Prom_Tx=(T1+T2+T3)/3,
+         Prom_Cx=(C1+C2+C3)/3) %>% 
+  select(1,8,9)
+Promedio_Genes
+head(Promedio_Genes)
+
+
+Analisis <- Promedio_Genes %>% 
+  mutate(DCT_Cx=Promedio_Genes$Prom_Cx-Promedio_Controles$Prom_Cx,
+         DCT_Tx=Promedio_Genes$Prom_Tx-Promedio_Controles$Prom_Tx,
+         dosDCT_Cx=2^-(DCT_Cx),
+         dosDCT_Tx=2^-(DCT_Tx),
+         dosDDCT=dosDCT_Tx/dosDCT_Cx)
+Analisis
+head(Analisis)#esto es para ver los seis primeros
+View(Analisis)#me va a llevar a la tabla
+write.csv(Analisis,#base de datos con la que se construyo la tabla
+          file="miRNAs.csv")#es el nombre del archivo
+#########################################################################
+
+#Grafica de puntos 
+Grafica <- ggplot(data=Analisis,
+                  mapping = aes(x=DCT_Cx, 
+                                y=DCT_Tx))+
+  geom_point(size=1.5,
+             color="#850E93")+
+  labs(title="Grafica de puntos", caption = "creado por Manolo",
+       x="Control (2^-DCT)",
+       y="Tratamiento (2^-DCT)")
+Grafica
+Regresion <- Grafica+ geom_smooth(method="lm",
+                                  color = "#c5c655",  # Cambia este código de color al que prefieras
+                                  alpha=0.05,
+                                  linewidth=1,
+                                  span=1) +
+  theme_minimal()
+Regresion
+ggsave("Grafica miRNAs.jpeg",
+       plot = Regresion,
+       width = 6,
+       height = 4,
+       dpi = 50)
+
+Grafica_puntos2 <- Regresion+
+  theme(axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 12) )+
+  theme(
+    text = element_text(size = 12, family = "Arial"),
+    axis.title = element_text(size = 14, face = "bold"),
+    plot.title = element_text(size = 16, face = "bold"),
+    panel.grid.major = element_line(color = "gray", linetype = "dotted"),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "white"),
+    legend.position = "botton",
+    legend.title = element_text(face = "bold"),
+    axis.line = element_line(color = "black")
+  )
