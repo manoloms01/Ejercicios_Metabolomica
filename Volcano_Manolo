@@ -1,0 +1,52 @@
+install.packages("pacman")
+library("pacman")
+p_load("vroom",
+       "ggplot2",
+       "ggrepel",
+       "dplyr",
+       "matrixTests")
+
+Volcano_data <- vroom(file="https://raw.githubusercontent.com/ManuelLaraMVZ/Transcript-mica/main/Datos%20completos%20miRNAs%20ejercicio.csv")
+head(Volcano_data)
+
+controles <- Volcano_data %>% 
+  filter(Type=="Selected Control") %>% 
+  select(-2)
+head(controles)
+
+Volcano_data2 <- Volcano_data %>% 
+  filter(Type=="Target") %>% 
+  select(-2)
+head(Volcano_data2)
+
+###############################################
+
+#obtención de promedios
+promedioT1 <- mean(controles$T1)
+promedioT2 <- mean(controles$T2)
+promedioT3 <- mean(controles$T3)
+promedioC1 <- mean(controles$C1)
+promedioC2 <- mean(controles$C2)
+promedioC3 <- mean(controles$C3)
+
+Volcano_data3 <- Volcano_data2 %>% 
+  mutate(DCT1=T1-promedioT1,
+         DCT2=T2-promedioT2,
+         DCT3=T3-promedioT3,
+         DCC1=C1-promedioC1,
+         DCC2=C2-promedioC2,
+         DCC3=C3-promedioC3) %>% 
+  select(-2,-3,-4,-5,-6,-7) %>% 
+  mutate(promedioDCT=(DCT1+DCT2+DCT3)/3,
+         promedioDCC=(DCC1+DCC2+DCC3)/3) %>% 
+  select(-2,-3,-4,-5,-6,-7) %>% 
+  mutate(dosDCT=2^-promedioDCT,
+         dosDCC=2^-promedioDCC,
+         dosDDCT=dosDCT/dosDCC,
+         FC=dosDDCT) %>% 
+  mutate(LogFC=log2(FC)) %>% 
+  select(1,4,5,7,8) 
+  
+head(Volcano_data3)
+
+Tvalue <- row_t_welch()
